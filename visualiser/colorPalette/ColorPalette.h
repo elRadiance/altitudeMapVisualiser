@@ -23,12 +23,41 @@ private:
 	};
 
 	template <typename T>
-	static T clamp(const T& value, const T& min, const T& max) {
+	static T clamp(const T value, const T min, const T max) {
 		return value <= min ? min : value >= max ? max : value;
 	}
 
 	static unsigned char mix(unsigned char left, unsigned char right, float delta) {
-		return left + (right - left) * delta;
+		_ASSERT(left >= 0);
+		int l = (int)left;
+		_ASSERT(l >= 0);
+		int r = (int)right;
+		_ASSERT(r >= 0);
+		int grad = r - l;
+		_ASSERT(grad >= -255 && grad <= 256);
+		float gradF = (float)grad;
+		_ASSERT(gradF <= 255.0f);
+		_ASSERT(gradF >= -255.0f);
+		_ASSERT(delta >= -1.0f);
+		_ASSERT(delta <= 1.0f);
+
+		float inc = delta * gradF;
+		_ASSERT(inc <= 255.0f);
+		_ASSERT(inc >= -255.0f);
+
+		float lf = (float)left;
+		_ASSERT(lf <= 255.0f);
+		_ASSERT(lf >= -255.0f);
+
+		float res = lf + inc;
+		_ASSERT(res <= 255.0f);
+		_ASSERT(lf >= 0.0f);
+
+		unsigned char resF = (unsigned char) res;
+		
+		return resF;
+
+		//return left + (right - left) * delta;
 	}
 
 	static void mix(const RGBColor* colorLeft,
@@ -50,26 +79,42 @@ public:
 		float interpolationDelta, interpolationPosition;
 		int colorsCount;
 
+		float altClamped = clamp(altitude, -1.0f, 1.0f);
+
+		if (altitude == 0.0f) {
+			dest->red = ColorPalette::PaletteHolder::LANDSCAPE_COLORS[0].blue;
+			dest->green = ColorPalette::PaletteHolder::LANDSCAPE_COLORS[0].green;
+			dest->blue = ColorPalette::PaletteHolder::LANDSCAPE_COLORS[0].blue;
+			return;
+		} 
+
 		if (altitude < 0.0f) {
 			// Ocean
 			colorsCount = ColorPalette::PaletteHolder::COLORS_COUNT_OCEAN;
-			interpolationPosition = (altitude + 1.0f) * (colorsCount - 1);
+			interpolationPosition = (altClamped + 1.0f) * (colorsCount - 1);
+			_ASSERT(interpolationPosition >= 0.0f);
+			_ASSERT(interpolationPosition <= 6.0f);
 			color0 = &(ColorPalette::PaletteHolder::OCEAN_COLORS[(int)interpolationPosition]);
 			color1 = &(ColorPalette::PaletteHolder::OCEAN_COLORS[(int)(interpolationPosition + 1.0f)]);
 			interpolationDelta = interpolationPosition - (int)interpolationPosition;
-
-			return mix(color0, color1, interpolationPosition, dest);
+			mix(color0, color1, interpolationDelta, dest);
+			return;
 		}
 		else {
-			// Landscape
-			colorsCount = ColorPalette::PaletteHolder::COLORS_COUNT_LANDSCAPE;
-			interpolationPosition = altitude * (colorsCount - 1);
-			color0 = &(ColorPalette::PaletteHolder::LANDSCAPE_COLORS[(int)interpolationPosition]);
-			color1 = &(ColorPalette::PaletteHolder::LANDSCAPE_COLORS[(int)(interpolationPosition + 1.0f)]);
-			interpolationDelta = interpolationPosition - (int)interpolationPosition;
+		// Landscape
+		colorsCount = ColorPalette::PaletteHolder::COLORS_COUNT_LANDSCAPE;
+		interpolationPosition = altClamped * (colorsCount - 1);
+		color0 = &(ColorPalette::PaletteHolder::LANDSCAPE_COLORS[(int)interpolationPosition]);
+		color1 = &(ColorPalette::PaletteHolder::LANDSCAPE_COLORS[(int)(interpolationPosition + 1.0f)]);
+		interpolationDelta = interpolationPosition - (int)interpolationPosition;
+		mix(color0, color1, interpolationDelta, dest);
 
-			return mix(color0, color1, interpolationPosition, dest);
+		return;
 		}
+
+
+
+
 	}
 
 };
