@@ -28,14 +28,7 @@ private:
 	}
 
 	static unsigned char mix(unsigned char left, unsigned char right, float delta) {
-		
-		int l = left;
-		int r = right;
-		int lr = r - l;
-		float inc = delta * lr;
-		float res = l + (int)inc;
-		return res;
-		
+		return left + (right - left) * delta;
 	}
 
 	static void mix(const RGBColor* colorLeft,
